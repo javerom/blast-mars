@@ -8,8 +8,8 @@ minimum blob integrated flux = 450000 cnts
 
 Commands:
 
-XSC0: ./blast_mars.py minflux=450000 minsize=7 imglist=imglist_xsc0.txt
-XSC1: ./blast_mars.py minflux=450000 minsize=7 imglist=imglist_xsc1.txt
+XSC0: ./blast_mars.py minflux=450000 minsize=7 imglist=imglist_xsc0.txt fieldrotation=1.749
+XSC1: ./blast_mars.py minflux=450000 minsize=7 imglist=imglist_xsc1.txt fieldrotation=1.751
 
 Note: use option dirfile=[filename] to specify dirfile with data corresponding to Mars scan
 	(Must have LAT, LON, TIME)
