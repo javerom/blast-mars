@@ -14,6 +14,15 @@ from astropy.coordinates import solar_system_ephemeris, get_body
 from astropy.coordinates import EarthLocation, SkyCoord, AltAz
 
 def blob_border(pixellist, thresh, image, blobmap):
+    """
+    A recursion function for blobfinding. Generates a pixel list of candidate blob pixels.
+
+    pixellist: A list containing all current candidate pixels. Must not be empty (i.e. at least have
+        the start pixel.
+    thresh: The value above which a pixel is considered a candidate pixel.
+    image: Reference to the image data (2D array)
+    blobmap: Reference to the truth map for pixels already considered (2D array, shape == image).
+    """
     (x, y) = pixellist[-1]
     (h, w) = image.shape
 
@@ -28,6 +37,13 @@ def blob_border(pixellist, thresh, image, blobmap):
             blob_border(pixellist, thresh, image, blobmap)
 
 def manual_blob_finder(image, minsigma=3, minnpx=8):
+    """
+    A manual blob finder that simply looks for blobs with a certain number of sigma above the mean.
+
+    image: Reference to the image data (2D array)
+    minsigma: The minimum number of standard deviations above the background a blob must be.
+    minpx: The minimum number of pixels per candidate blob to be considered a blob.
+    """
     image = image - np.mean(image)
     sigma = np.std(image)
     thresh = sigma * minsigma
@@ -93,26 +109,31 @@ def manual_blob_finder(image, minsigma=3, minnpx=8):
 
 
 
-def find_brightest_biggest(filename, catname="sources.cat", config="config.sex", minradius=10,
+def find_brightest_biggest(filename, catname="sources.cat", config="config.sex", minsize=10,
         minflux=450000):
     """
     Returns the coordinates of the brightest, biggest star/object in the image relative to the center
     of the frame (top-left to bottom-right is increasing xy).
     
     filename: File name of the fits image in which the blob will be found
+    catname: The name of the file to be written by sextractor when finding blobs
+    config: The configuration file for sextractor
+    minsize: The minimum size (width or height) of a blob to be considered big.
+    minflux: The minimum integrated flux of a blub to be considered bright.
     """
     # Get dimensions of the image
     hdulist = pf.open(filename)
     (height, width) = hdulist[0].data.shape
-
     bloblist = manual_blob_finder(hdulist[0].data)
+    hdulist.close()
+
     if bloblist is None:
         return None
 
     sort_ind = np.argsort(bloblist['max'])[::-1]
     blob_ind = None
     for ind in sort_ind:
-        if bloblist['width'][ind] >= minradius and bloblist['flux'][ind] > minflux:
+        if bloblist['width'][ind] >= minsize and bloblist['flux'][ind] > minflux:
             blob_ind = ind
             break
 
@@ -126,6 +147,9 @@ def find_brightest_biggest(filename, catname="sources.cat", config="config.sex",
             bloblist['max'][blob_ind])
 
     '''
+    # Use sextractor to find blobs.
+    # N.B. may be tuning of parameters, but this was mostly unreliable and noisy.
+
     hdulist.close()
 
     # Source extract
@@ -137,7 +161,7 @@ def find_brightest_biggest(filename, catname="sources.cat", config="config.sex",
     sort_ind = np.argsort(srctable['FLUX_MAX'])[::-1]
     blob_ind = None
     for ind in sort_ind:
-        if (srctable['FLUX_RADIUS'][ind] > minradius and srctable['FLUX_MAX'][ind] > minflux and
+        if (srctable['FLUX_RADIUS'][ind] > minsize and srctable['FLUX_MAX'][ind] > minflux and
                 srctable['FLUX_RADIUS'][ind] < maxradius and srctable['FLUX_MAX'][ind] < maxflux):
             blob_ind = ind;
             break
@@ -172,17 +196,22 @@ def get_mars_ephemeris(timedate):
     return mars 
 
 def extract_obstime_from_name(filename, tz=13):
+    """
+    Talks a filename in XSC convention and generates a Time object based on it.
+
+    filename: the XSC convention filename from which time and date will be extracted
+    tz: the timezone that the date and time are referenced to (+13 for NZT)
+    """
     name = filename.split("/")[-1]
     datebits = name.split("--")
     (Y,M,D) = datebits[0].split("-")
     (h,m,s) = datebits[1].split("-")
     ms = datebits[2].split(".")[0]
-    tz = TimezoneInfo(utc_offset=13*u.hour)
+    tz = TimezoneInfo(utc_offset=tz*u.hour)
     t = datetime(int(Y), int(M), int(D), int(h), int(m), int(s), 1000*int(ms), tzinfo=tz)
     obstime = Time(t)
     obstime.format = 'unix'
     return obstime
-
 
 # Defaults
 dirfilename = "/data6/fc1/extracted/master_2020-01-06-06-21-22/"
@@ -193,7 +222,7 @@ timezone = 13
 xsc = 1
 fieldrotation = 2.914 
 minflux = 450000
-minradius = 10
+minsize = 10
 
 # Parse arguments
 for arg in sys.argv[1:]:
@@ -216,8 +245,8 @@ for arg in sys.argv[1:]:
         fieldrotation = float(value)
     elif option == "minflux":
         minflux = float(value)
-    elif option == "minradius":
-        minradius = float(value)
+    elif option == "minsize":
+        minsize = float(value)
     else:
         print("Unrecognized option " + option)
         sys.exit()
@@ -255,7 +284,7 @@ for filename in filelist.readlines():
 
     # Get the EL, XEL coordinates for Mars w.r.t. to the center of the frame
     # filename = "/data6/xsc1/images/2020-01-07/2020-01-07--07-15-59--380.fits"
-    centroid = find_brightest_biggest(filename, minradius=minradius, minflux=minflux)
+    centroid = find_brightest_biggest(filename, minsize=minsize, minflux=minflux)
     if centroid is None: # or (prev_centroid is not None and abs(centroid[1] - prev_centroid[1]) > 10):
         continue
     prev_centroid = centroid
