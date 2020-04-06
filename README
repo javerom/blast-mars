@@ -1,0 +1,17 @@
+BLAST pointing from Mars: (javier.romualdez@gmail.com)
+------------------------------------------------------
+
+Best results were achieved when running with the following parameters:
+
+minimum blob size = 7 px
+minimum blob integrated flux = 450000 cnts
+
+Commands:
+
+XSC0: ./blast_mars.py minflux=450000 minsize=7 imglist=imglist_xsc0.txt
+XSC1: ./blast_mars.py minflux=450000 minsize=7 imglist=imglist_xsc1.txt
+
+Note: use option dirfile=[filename] to specify dirfile with data corresponding to Mars scan
+	(Must have LAT, LON, TIME)
+
+See blast_mars.py for more tuning options.
