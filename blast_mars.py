@@ -13,6 +13,7 @@ from astropy.time import Time, TimezoneInfo
 from astropy.coordinates import solar_system_ephemeris, get_body
 from astropy.coordinates import EarthLocation, SkyCoord, AltAz
 
+
 def blob_border(pixellist, thresh, image, blobmap):
     """
     A recursion function for blobfinding. Generates a pixel list of candidate blob pixels.
